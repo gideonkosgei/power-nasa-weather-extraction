@@ -17,8 +17,8 @@ class Process:
         self.database = 'power_nasa_weather'
         self.user = 'root'
         self.password = 'G1d30nk0sg3189'
-        self.start = '20160101'
-        self.end = '20221208'
+        self.start = '20140101'
+        self.end = '20221231'
 
         self.processes = 5  # Please do not go more than five concurrent requests.
 
@@ -70,22 +70,23 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select distinct lon_trunc,lat_trunc from data_points where is_duplicate = 0 and is_processed_temp=0"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed_temp=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records
                 print("Total Number Of Data Points: ", cursor.rowcount)
                 requests = []
                 for record in records:
-                    longitude = record[0]
-                    latitude = record[1]
+                    record_id = record[0]
+                    longitude = record[1]
+                    latitude = record[2]
                     request = self.request_template.format(latitude=latitude, longitude=longitude,
                                                            start=self.start, end=self.end)
                     filename = self.filename_template.format(latitude=latitude, longitude=longitude)
                     requests.append((request, filename))
 
-                    sql_update_query = "UPDATE data_points SET is_processed_temp =1 WHERE trim(lon_trunc)={longitude} AND trim(lat_trunc)={latitude}".format(
-                        latitude=latitude, longitude=longitude)
+                    sql_update_query = "UPDATE data_points SET is_processed_temp =1 WHERE trim(id)={id}".format(
+                        id=record_id)
                     cursor.execute(sql_update_query)
                     connection.commit()
 

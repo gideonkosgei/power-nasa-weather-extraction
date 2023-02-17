@@ -22,8 +22,8 @@ class Process:
         self.database = 'power_nasa_weather',
         self.user = 'root',
         self.password = 'G1d30nk0sg3189'
-        self.start = '20160101'
-        self.end = '20221208'
+        self.start = '20140101'
+        self.end = '20221231'
 
         self.processes = 5  # Please do not go more than five concurrent requests.
 
@@ -43,7 +43,7 @@ class Process:
 
             if connection.is_connected():
                 sql_select_query = \
-                    "select id, lon_trunc, lat_trunc from data_points where is_duplicate = 0 and is_processed=0 limit 5"
+                    "select id, lon_trunc, lat_trunc from data_points where is_processed=0 limit 5"
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records

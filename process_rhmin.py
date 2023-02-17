@@ -17,8 +17,8 @@ class Process:
         self.database = 'power_nasa_weather'
         self.user = 'root'
         self.password = 'G1d30nk0sg3189'
-        self.start = '20160101'
-        self.end = '20221208'
+        self.start = '20140101'
+        self.end = '20221231'
 
         self.processes = 5  # Please do not go more than five concurrent requests.
         self.request_template = r"https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=RH2M&community=AG&longitude={longitude}&latitude={latitude}&start={start}&end={end}&format=JSON"
@@ -29,7 +29,7 @@ class Process:
 
     def download_function(self, collection):
 
-        request, filepath = collection
+        request, filepath, record_id = collection
         response = requests.get(url=request, verify=False, timeout=30.00).json()
 
         try:
@@ -60,14 +60,13 @@ class Process:
                     rh2m_min_value = min(rh2m_values)
                     rh2m_date_unique_formatted = datetime.datetime.strptime(rh2m_date_unique, '%Y%m%d').date()
                     rh2m_date_unique_formatted_str = rh2m_date_unique_formatted.strftime('%Y-%m-%d')
-                    record_to_update = (rh2m_min_value, rh2m_date_unique_formatted_str, longitude, latitude)
+                    # record_to_update = (rh2m_min_value, rh2m_date_unique_formatted_str, longitude, latitude)
+                    record_to_update = (rh2m_min_value, rh2m_date_unique_formatted_str, record_id)
                     records_to_update.append(record_to_update)
 
-                sql_update_query = """UPDATE weather_data set RH_MIN = %s WHERE date_value = %s AND trim(longitude) = %s AND trim(latitude) = %s"""
+                sql_update_query = """ insert into rm_min_data(RH_MIN,date_value,data_point_id) values (%s,%s,%s)"""
                 cursor.executemany(sql_update_query, records_to_update)
-
-                sql_update_query2 = "update data_points set is_processed_rm =1 where trim(lon_trunc)={longitude} and trim(lat_trunc)={latitude}".format(
-                    latitude=latitude, longitude=longitude)
+                sql_update_query2 = "UPDATE data_points SET is_processed_rm =1 WHERE trim(id)={id}".format(id=record_id)
                 cursor.execute(sql_update_query2)
 
         except Error as e:
@@ -85,19 +84,21 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select distinct lon_trunc,lat_trunc from data_points where is_duplicate = 0 and is_processed_rm=0"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed_rm=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
+
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records
                 print("Total Number Of Data Points: ", cursor.rowcount)
                 requests = []
                 for record in records:
-                    longitude = record[0]
-                    latitude = record[1]
+                    record_id = record[0]
+                    longitude = record[1]
+                    latitude = record[2]
                     request = self.request_template.format(latitude=latitude, longitude=longitude,
                                                            start=self.start, end=self.end)
                     filename = self.filename_template.format(latitude=latitude, longitude=longitude)
-                    requests.append((request, filename))
+                    requests.append((request, filename, record_id))
 
         except Error as e:
             print("Error while connecting to MySQL", e)
