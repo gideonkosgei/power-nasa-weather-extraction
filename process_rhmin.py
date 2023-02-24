@@ -28,7 +28,6 @@ class Process:
         self.times = {}
 
     def download_function(self, collection):
-
         request, filepath, record_id = collection
         response = requests.get(url=request, verify=False, timeout=30.00).json()
 
