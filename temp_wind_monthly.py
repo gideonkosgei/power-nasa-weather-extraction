@@ -20,7 +20,7 @@ class Process:
 
         self.processes = 5  # Please do not go more than five concurrent requests.
 
-        self.request_template = r"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,T2M_MAX,T2M_MIN,WS2M,WS2M_MAX,WS2M_MIN&community=AG&longitude=36.8&latitude=-3.3&start=20140101&end=20150101&format=JSON"
+        self.request_template = r"https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=T2M,T2M_MAX,T2M_MIN,WS2M,WS2M_MAX,WS2M_MIN&community=AG&longitude=36.8&latitude=-3.3&start=20140101&end=20150101&format=JSON"
         self.filename_template = "File_Lat_{latitude}_Lon_{longitude}.csv"
 
         self.messages = []
