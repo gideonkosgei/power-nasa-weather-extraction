@@ -20,7 +20,7 @@ class Process:
 
         self.processes = 5  # Please do not go more than five concurrent requests.
 
-        self.request_template = r"https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=T2M,T2M_MAX,T2M_MIN,WS2M,WS2M_MAX,WS2M_MIN&community=AG&longitude=36.8&latitude=-3.3&start=20140101&end=20150101&format=JSON"
+        self.request_template = r"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M,T2M_MAX,T2M_MIN,WS2M,WS2M_MAX,WS2M_MIN&community=AG&longitude={longitude}&latitude={latitude}&start={start}&end={end}&format=JSON"
         self.filename_template = "File_Lat_{latitude}_Lon_{longitude}.csv"
 
         self.messages = []
@@ -36,6 +36,7 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
+                # print(response)
                 longitude = response['geometry']['coordinates'][0]
                 latitude = response['geometry']['coordinates'][1]
                 t2m_max_records = response['properties']['parameter']['T2M']
@@ -43,9 +44,11 @@ class Process:
                 cursor = connection.cursor()
                 for t2m_max_date in t2m_max_dates:
                     t2m_max_value = t2m_max_records[t2m_max_date]
+                    t2m_max_date_formatted = datetime.datetime.strptime(t2m_max_date, '%Y%m%d').date()
+                    t2m_max_date_formatted_str = t2m_max_date_formatted.strftime('%Y-%m-%d')
 
                     sql_insert_query = "insert into weather_data_montly_avg_temp(date_value,longitude,latitude,T2M) values (\'{date_value}\',{longitude},{latitude},{T2M_MAX})".format(
-                        date_value=t2m_max_date, longitude=longitude, latitude=latitude,
+                        date_value=t2m_max_date_formatted_str, longitude=longitude, latitude=latitude,
                         T2M_MAX=t2m_max_value)
                     cursor.execute(sql_insert_query)
                     connection.commit()
@@ -66,7 +69,7 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id limit 5"
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records
