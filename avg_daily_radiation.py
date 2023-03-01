@@ -20,7 +20,7 @@ class Process:
 
         self.processes = 5  # Please do not go more than five concurrent requests.
 
-        self.request_template = r"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=PRECTOTCORR&community=AG&longitude={longitude}&latitude={latitude}&start={start}&end={end}&format=JSON"
+        self.request_template = r"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DNI&community=AG&longitude={longitude}&latitude={latitude}&start={start}&end={end}&format=JSON"
         self.filename_template = "File_Lat_{latitude}_Lon_{longitude}.csv"
 
         self.messages = []
@@ -39,7 +39,7 @@ class Process:
                 # print(response)
                 longitude = response['geometry']['coordinates'][0]
                 latitude = response['geometry']['coordinates'][1]
-                t2m_max_records = response['properties']['parameter']['PRECTOTCORR']
+                t2m_max_records = response['properties']['parameter']['ALLSKY_SFC_SW_DNI']
                 t2m_max_dates = list(t2m_max_records.keys())
                 cursor = connection.cursor()
                 for t2m_max_date in t2m_max_dates:
@@ -47,9 +47,9 @@ class Process:
                     t2m_max_date_formatted = datetime.datetime.strptime(t2m_max_date, '%Y%m%d').date()
                     t2m_max_date_formatted_str = t2m_max_date_formatted.strftime('%Y-%m-%d')
 
-                    sql_insert_query = "insert into weather_data_daily_avg_rain(date_value,longitude,latitude,PRECTOTCORR) values (\'{date_value}\',{longitude},{latitude},{PRECTOTCORR})".format(
+                    sql_insert_query = "insert into weather_data_daily_avg_radiation(date_value,longitude,latitude,PRECTOTCORR) values (\'{date_value}\',{longitude},{latitude},{ALLSKY_SFC_SW_DNI})".format(
                         date_value=t2m_max_date_formatted_str, longitude=longitude, latitude=latitude,
-                        PRECTOTCORR=t2m_max_value)
+                        ALLSKY_SFC_SW_DNI=t2m_max_value)
                     cursor.execute(sql_insert_query)
                     connection.commit()
 
@@ -69,7 +69,7 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select id,lon_trunc,lat_trunc from data_points_rn where is_processed=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points_rad where is_processed=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records
@@ -85,7 +85,7 @@ class Process:
                     filename = self.filename_template.format(latitude=latitude, longitude=longitude)
                     requests.append((request, filename))
 
-                    sql_update_query = "UPDATE data_points_rn SET is_processed =1 WHERE trim(id)={id}".format(
+                    sql_update_query = "UPDATE data_points_rad SET is_processed =1 WHERE trim(id)={id}".format(
                         id=record_id)
                     cursor.execute(sql_update_query)
                     connection.commit()
