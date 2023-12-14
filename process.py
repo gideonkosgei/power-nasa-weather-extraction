@@ -14,10 +14,10 @@ class Process:
 
         # Mysql Database Settings
         self.host = 'localhost'
-        self.database = 'power_nasa_weather'
+        self.database = 'richard'
         self.user = 'root'
         self.password = 'G1d30nk0sg3189'
-        self.start = '20140101'
+        self.start = '20010301'
         self.end = '20221231'
 
         self.processes = 5  # Please do not go more than five concurrent requests.
@@ -27,6 +27,8 @@ class Process:
 
         self.messages = []
         self.times = {}
+
+
 
     def download_function(self, collection):
 
@@ -70,7 +72,7 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed_temp=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
                 records = cursor.fetchall()  # get all records
@@ -85,7 +87,7 @@ class Process:
                     filename = self.filename_template.format(latitude=latitude, longitude=longitude)
                     requests.append((request, filename))
 
-                    sql_update_query = "UPDATE data_points SET is_processed_temp =1 WHERE trim(id)={id}".format(
+                    sql_update_query = "UPDATE data_points SET is_processed =1 WHERE trim(id)={id}".format(
                         id=record_id)
                     cursor.execute(sql_update_query)
                     connection.commit()

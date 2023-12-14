@@ -14,11 +14,12 @@ class Process:
 
         # Mysql Database Settings
         self.host = 'localhost'
-        self.database = 'power_nasa_weather'
+        self.database = 'kapiti_weather'
         self.user = 'root'
         self.password = 'G1d30nk0sg3189'
-        self.start = '20140101'
-        self.end = '20221231'
+        # self.start = '19880101'
+        self.start = '20160101'
+        self.end = '20230325'
 
         self.processes = 5  # Please do not go more than five concurrent requests.
         self.request_template = r"https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=RH2M&community=AG&longitude={longitude}&latitude={latitude}&start={start}&end={end}&format=JSON"
@@ -57,15 +58,16 @@ class Process:
 
                     # get the minimum relative humidity
                     rh2m_min_value = min(rh2m_values)
+                    rh2m_max_value = max(rh2m_values)
                     rh2m_date_unique_formatted = datetime.datetime.strptime(rh2m_date_unique, '%Y%m%d').date()
                     rh2m_date_unique_formatted_str = rh2m_date_unique_formatted.strftime('%Y-%m-%d')
-                    # record_to_update = (rh2m_min_value, rh2m_date_unique_formatted_str, longitude, latitude)
-                    record_to_update = (rh2m_min_value, rh2m_date_unique_formatted_str, record_id)
+                    # record_to_update = (rh2m_min_value,rh2m_max_value, rh2m_date_unique_formatted_str, longitude, latitude)
+                    record_to_update = (rh2m_min_value, rh2m_max_value, rh2m_date_unique_formatted_str, longitude, latitude)
                     records_to_update.append(record_to_update)
 
-                sql_update_query = """ insert into rm_min_data(RH_MIN,date_value,data_point_id) values (%s,%s,%s)"""
+                sql_update_query = """ insert into rm_min_max_data(RH_MIN,RH_MAX,date_value,longitude,latitude) values (%s,%s,%s,%s,%s)"""
                 cursor.executemany(sql_update_query, records_to_update)
-                sql_update_query2 = "UPDATE data_points SET is_processed_rm =1 WHERE trim(id)={id}".format(id=record_id)
+                sql_update_query2 = "UPDATE data_points SET is_processed =1 WHERE trim(id)={id}".format(id=record_id)
                 cursor.execute(sql_update_query2)
 
         except Error as e:
@@ -83,7 +85,7 @@ class Process:
                                                  password=self.password)
 
             if connection.is_connected():
-                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where is_processed_rm=0 and (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
+                sql_select_query = "select id,lon_trunc,lat_trunc from data_points where (lat_trunc between -90 and 90) and (lon_trunc between -180 and 180) order by id"
 
                 cursor = connection.cursor()
                 cursor.execute(sql_select_query)
@@ -96,6 +98,7 @@ class Process:
                     latitude = record[2]
                     request = self.request_template.format(latitude=latitude, longitude=longitude,
                                                            start=self.start, end=self.end)
+                    print(request)
                     filename = self.filename_template.format(latitude=latitude, longitude=longitude)
                     requests.append((request, filename, record_id))
 
